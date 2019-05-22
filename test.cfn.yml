@@ -1,0 +1,46 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Test Custom Resource
+
+
+Resources:
+
+  CustomResource:
+    Type: Custom::CustomResource
+    Properties:
+      ServiceToken: !GetAtt CustomResourceLambda.Arn
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+
+  CustomResourceLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: public-aws-serverless-repo
+        S3Key: cfn-custom-resource-password-generator.zip
+      Handler: main
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: go1.x
+      Timeout: 300
+
+  PasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      SecretString: !GetAtt CustomResource.Password
+      Name: !Sub /${AWS::StackName}/secret-test
+
+
